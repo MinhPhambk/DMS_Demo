@@ -1,0 +1,107 @@
+<head>
+  <script src="//cdn.jsdelivr.net/npm/3d-force-graph"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="./index.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+  <div id="3d-graph"></div>
+
+  <div id="popup-overlay">
+    <div id="popup-box">
+      <div id="video-column" style="position: relative;">
+        <video id="camera-stream" autoplay playsinline></video>
+        <canvas id="canvas" width="100%" height="100%"
+          style="position: absolute; top: 0; left: 0; pointer-events: none;"></canvas>
+      </div>
+      <div id="text-column">
+        <div id="alert-container" style="background: transparent !important;">
+          <div class="chill"><i class="fas fa-sun"></i> Bạn Đang Tỉnh Táo!</div>
+        </div>
+        <div style="background: transparent !important;">
+          <canvas id="status-chart" width="400" height="160"></canvas>
+        </div>
+        <div style="background: transparent !important;">
+          <canvas id="status-chart1" width="400" height="190"></canvas>
+        </div>
+
+      </div>
+    </div>
+    <canvas id="overlay-canvas"></canvas>
+  </div>
+
+  <script>
+    const elem = document.getElementById('3d-graph');
+
+    const Graph = new ForceGraph3D(elem)
+      .jsonUrl('/datasets/blocks.json')
+      .nodeAutoColorBy('user')
+      .nodeLabel(node => `${node.user}: ${node.description}`)
+      .onNodeClick(node => window.open(`https://bl.ocks.org/${node.user}/${node.id}`, '_blank'));
+
+    setTimeout(() => {
+      const overlay = document.getElementById('popup-overlay');
+      overlay.classList.add('show');
+    }, 3000);
+
+    const video = document.getElementById('camera-stream');
+    navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user" },
+      audio: false
+    })
+      .then(stream => {
+        video.srcObject = stream;
+      })
+      .catch(err => {
+        console.error("Không thể truy cập camera: ", err);
+        video.insertAdjacentHTML("beforebegin", `<p style="color:red;">Không thể mở camera.</p>`);
+      });
+
+    function updateCanvasSize() {
+      canvas.width = video.offsetWidth;
+      canvas.height = video.offsetHeight;
+    }
+
+    video.addEventListener('loadedmetadata', function () {
+      updateCanvasSize();
+    });
+
+    window.addEventListener('resize', function () {
+      updateCanvasSize();
+    });
+  </script>
+
+  <script src="./util.js"></script>
+
+</body>
+
+<script src="https://cdn.jsdelivr.net/npm/tracking@1.1.3/build/tracking-min.js"></script>
+
+<script>
+  const context = canvas.getContext('2d');
+  tracking.FaceTracker.getTracker().load(function () {
+    // Khởi tạo tracker với đối tượng face
+    const tracker = new tracking.ObjectTracker('face');
+
+    // Lắng nghe sự kiện track và vẽ hình chữ nhật quanh khuôn mặt
+    tracker.on('track', function (event) {
+      context.clearRect(0, 0, canvas.width, canvas.height); // Xóa canvas
+      context.drawImage(video, 0, 0, canvas.width, canvas.height); // Vẽ video lên canvas
+
+      event.data.forEach(function (rect) {
+        // Vẽ hình chữ nhật màu đỏ quanh khuôn mặt
+        context.strokeStyle = 'red';
+        context.lineWidth = 4;
+        context.strokeRect(rect.x, rect.y, rect.width, rect.height);
+      });
+    });
+
+    // Bắt đầu nhận diện khuôn mặt
+    tracking.track('#camera-stream', tracker);
+  });
+
+  // Bắt đầu nhận diện khuôn mặt
+  tracking.track('#camera-stream', tracker);
+
+</script>
